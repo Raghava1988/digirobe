@@ -1,3 +1,5 @@
+com\wardrobe\user\UserService.class
+com\wardrobe\email\EmailService.class
 com\wardrobe\item\Item.class
 com\wardrobe\item\ItemDTO.class
 com\wardrobe\security\JwtTokenProvider.class

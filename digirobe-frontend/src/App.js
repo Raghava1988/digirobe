@@ -1,13 +1,44 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Plus, X, WashingMachine, Shirt, Trash2, MoreVertical, Sparkles, Wand2, LogOut } from 'lucide-react';
+import { Routes, Route, useSearchParams, useNavigate } from 'react-router-dom';
+import { Plus, X, WashingMachine, Shirt, Trash2, MoreVertical, Sparkles, Wand2, LogOut, ChevronDown, Search } from 'lucide-react';
 
 // --- API Configuration ---
-const API_BASE_URL = 'https://digirobe.onrender.com';
+// const API_BASE_URL = 'https://digirobe.onrender.com'; 
+const API_BASE_URL = 'http://localhost:8080';
 
-// =================================================================================
-// --- Main App Component (Handles Routing and Auth State) ---
-// =================================================================================
+const categoryData = [
+    {
+        name: 'Top Wear',
+        subCategories: ['T-Shirts', 'Shirts', 'Jackets', 'Hoodies', 'Sweatshirts']
+    },
+    {
+        name: 'Bottom Wear',
+        subCategories: ['Pants', 'Sweatpants', 'Shorts']
+    },
+    {
+        name: 'Footwear',
+        subCategories: ['Shoes', 'Socks']
+    },
+    {
+        name: 'Accessories',
+        subCategories: ['Hats', 'Belts', 'Watches', 'Sunglasses', 'Underwear']
+    }
+];
+
 export default function App() {
+  return (
+    <Routes>
+      {/* This new route handles the password reset link from the email */}
+      <Route path="/reset-password" element={<PasswordResetPage />} />
+
+      {/* This route handles all other pages of your application */}
+      <Route path="*" element={<MainApp />} />
+    </Routes>
+  );
+}
+
+
+function MainApp() {
     const [authToken, setAuthToken] = useState(localStorage.getItem('authToken'));
 
     const handleLogin = (token) => {
@@ -32,11 +63,51 @@ export default function App() {
 }
 
 // =================================================================================
+// --- NEW: A dedicated page component for handling the reset password URL ---
+// =================================================================================
+function PasswordResetPage() {
+    // This is a special tool from React Router to read the URL
+    const [searchParams] = useSearchParams();
+    const navigate = useNavigate(); // This tool lets us redirect the user
+
+    // It looks for "?token=..." in the URL
+    const token = searchParams.get('token');
+    console.log("FRONTEND RECEIVED TOKEN:", token);
+
+    const handlePasswordHasBeenReset = () => {
+        alert('Password has been successfully reset! Please log in with your new password.');
+        // After success, send the user back to the login page
+        navigate('/');
+    };
+
+    return (
+         <div className="flex items-center justify-center min-h-screen bg-gray-50">
+            <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
+                {token ? (
+                    // If we find a token in the URL, we show the ResetPasswordView
+                    <ResetPasswordView onPasswordReset={handlePasswordHasBeenReset} token={token} /> // <-- ADD token={token} HERE
+                ) : (
+                    // If the URL has no token, we show an error
+                    <div>
+                        <h1 className="text-xl font-bold text-center text-red-600">Invalid Link</h1>
+                        <p className="text-center mt-4">The password reset link is missing or invalid.</p>
+                        <div className="text-sm text-center mt-4">
+                            <button onClick={() => navigate('/')} className="font-semibold text-blue-600 hover:underline">
+                                &larr; Back to Login
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+// =================================================================================
 // --- Authentication Page Component (Login & Register) ---
 // UPDATED: Correctly handles text-based error responses from the backend.
 // =================================================================================
 function AuthPage({ onLogin }) {
-    const [isLoginView, setIsLoginView] = useState(true);
+    const [view, setView] = useState('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -49,7 +120,7 @@ function AuthPage({ onLogin }) {
         setError('');
         setMessage('');
 
-        const endpoint = isLoginView ? '/api/auth/login' : '/api/auth/register';
+        const endpoint = view === 'login' ? '/api/auth/login' : '/api/auth/register';
         const payload = { email, password };
 
         try {
@@ -62,17 +133,17 @@ function AuthPage({ onLogin }) {
             // If the response is NOT successful, handle it as a text-based error
             if (!response.ok) {
                 const errorText = await response.text(); // Read the error as plain text
-                throw new Error(errorText || (isLoginView ? 'Invalid credentials' : 'Registration failed'));
+                throw new Error(errorText || (view === 'login' ? 'Invalid credentials' : 'Registration failed'));
             }
 
             // If the response IS successful, handle it as JSON
-            if (isLoginView) {
+            if (view) {
                 const data = await response.json(); // This will contain the token
                 onLogin(data.token);
             } else {
                 const successText = await response.text(); // Read the success message as plain text
                 setMessage(successText || 'Registration successful! Please log in.');
-                setIsLoginView(true); // Switch to login view after successful registration
+                setView(true); // Switch to login view after successful registration
             }
 
         } catch (err) {
@@ -85,9 +156,14 @@ function AuthPage({ onLogin }) {
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-50">
             <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
+                {view === 'login' && (
+                    <>
                 <h1 className="text-3xl font-bold text-center text-gray-800">
-                    {isLoginView ? 'Welcome to Digirobe' : 'Create Your Account'}
+                    Welcome to Digirobe
                 </h1>
+                <h2 className="">
+                    Login here!
+                </h2>
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <InputField label="Email" name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                     <InputField label="Password" name="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
@@ -97,18 +173,200 @@ function AuthPage({ onLogin }) {
 
                     <div>
                         <button type="submit" disabled={isLoading} className="w-full px-4 py-2 font-semibold text-white bg-blue-600 rounded-lg shadow-sm hover:bg-blue-700 disabled:bg-blue-300 transition-colors">
-                            {isLoading ? <Spinner /> : (isLoginView ? 'Login' : 'Register')}
+                            {isLoading ? <Spinner /> : 'Login'}
                         </button>
                     </div>
                 </form>
-                <p className="text-sm text-center text-gray-600">
-                    {isLoginView ? "Don't have an account? " : "Already have an account? "}
-                    <button onClick={() => setIsLoginView(!isLoginView)} className="font-semibold text-blue-600 hover:underline">
-                        {isLoginView ? 'Register' : 'Login'}
-                    </button>
-                </p>
+                </>
+                )}
+                {view === 'register' && (
+                    <>
+                <h1 className="text-3xl font-bold text-center text-gray-800">
+                    Welcome to Digirobe
+                </h1>
+                <h2 className="">
+                    Create Your to Account
+                </h2>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <InputField label="Email" name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                    <InputField label="Password" name="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                    
+                    {error && <p className="text-sm text-center text-red-600 bg-red-50 p-3 rounded-md">{error}</p>}
+                    {message && <p className="text-sm text-center text-green-600 bg-green-50 p-3 rounded-md">{message}</p>}
+
+                    <div>
+                        <button type="submit" disabled={isLoading} className="w-full px-4 py-2 font-semibold text-white bg-blue-600 rounded-lg shadow-sm hover:bg-blue-700 disabled:bg-blue-300 transition-colors">
+                            {isLoading ? <Spinner /> : 'Register'}
+                        </button>
+                    </div>
+                </form>
+                </>
+                )}
+                {view === 'forgot' && (
+                    <ForgotPasswordView onBackToLogin={() => setView('login')} />
+                )}
+                {view === 'reset' && (
+                    <ResetPasswordView onPasswordReset={() => {
+                    alert('Password has been reset! Please log in with your new password.');
+                    setView('login');
+                    }} />
+                )}
+                <div className="text-sm text-center text-gray-600 flex flex-col items-center">
+                    <p>
+                        {view === 'login' ? "Don't have an account? " : "Already have an account? "}
+                        <button onClick={() => setView(view === 'login' ? 'register' : 'login')} className="font-semibold text-blue-600 hover:underline">
+                            {view === 'login' ? 'Register' : 'Login'}
+                        </button>
+                    </p>
+                    {view === 'login' && (
+                        <button onClick={() => setView('forgot')}className = "font-semibold text-blue-600 hover:underline text-xs">
+                            Forgot Password?
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
+    );
+}
+
+function ResetPasswordView({ onPasswordReset, token }){ // Note the new 'token' prop
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        // --- Start of Frontend Validation ---
+        if (newPassword !== confirmPassword){
+            setError("Passwords don't match!");
+            return;
+        }
+        if (newPassword.length < 6){
+            setError("Password must be at least 6 characters long.");
+            return;
+        }
+        // --- End of Frontend Validation ---
+
+        setIsLoading(true);
+        setError('');
+
+        try {
+            // This is the URL for our reset password endpoint, with the token in the query parameter
+            const url = `${API_BASE_URL}/api/auth/reset-password?token=${token}`;
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                // The body contains the new password
+                body: JSON.stringify({ password: newPassword }),
+            });
+
+            const responseText = await response.text();
+
+            if (!response.ok) {
+                // If the backend returns an error (like "Invalid token"), display it
+                throw new Error(responseText || 'Failed to reset password.');
+            }
+
+            // If the backend call is successful, call the onPasswordReset prop
+            // which will show the alert and navigate back to the login page.
+            onPasswordReset();
+
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return(
+        <>
+            <h1 className = "text-3xl font-bold text-center text-gray-800">
+                Create a New Password
+            </h1>
+            <h2 className="text-center text-gray-500 mt-2 text-sm">
+                Your new password must be different from previous ones.
+            </h2>
+            <form onSubmit = {handleSubmit} className="space-y-6 mt-6">
+               <InputField label="New Password" name="newPassword" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+                <InputField label="Confirm New Password" name="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                
+                {error && <p className="text-sm text-center text-red-600 bg-red-50 p-3 rounded-md">{error}</p>}
+
+                <div>
+                    <button type="submit" className="w-full px-4 py-2 font-semibold text-white bg-blue-600 rounded-lg shadow-sm hover:bg-blue-700 disabled:bg-blue-300" disabled={isLoading}>
+                        {isLoading ? <Spinner /> : 'Reset Password'}
+                    </button>
+                </div>
+            </form>  
+        </>
+    );
+}
+function ForgotPasswordView({onBackToLogin}){
+    const [email, setEmail] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [message, setMessage] = useState('');
+    const [error, setError] = useState('');
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setMessage('');
+        setError('');
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email: email }), // Correctly formats the JSON payload
+            });
+
+            const responseText = await response.text();
+
+            if (!response.ok) {
+                throw new Error(responseText || 'An unknown error occurred.');
+            }
+            
+            setMessage(responseText);
+
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <>
+            <h1 className="text-3xl font-bold text-center text-gray-800">
+                Forgot Your Password
+            </h1>
+            <h2 className="text-center text-gray-500 mt-2 text-sm">
+                Enter your email to reset your password
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-6 mt-6">
+                <InputField label="Email" name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                
+                {error && <p className="text-sm text-center text-red-600 bg-red-50 p-3 rounded-md">{error}</p>}
+                {message && <p className="text-sm text-center text-green-600 bg-green-50 p-3 rounded-md">{message}</p>}
+
+                <div>
+                    <button type="submit" className="w-full px-4 py-2 font-semibold text-white bg-blue-600 rounded-lg shadow-sm hover:bg-blue-700 disabled:bg-blue-300" disabled={isLoading}>
+                        {isLoading ? <Spinner /> : 'Send Reset Link'}
+                    </button>
+                </div>
+            </form>
+            <div className="text-sm text-center text-gray-600 mt-4">
+                <button onClick={onBackToLogin} className="font-semibold text-blue-600 hover:underline">
+                    &larr; Back to Login
+                </button>
+            </div>
+        </>
     );
 }
 
@@ -119,16 +377,15 @@ function AuthPage({ onLogin }) {
 function WardrobeApp({ token, onLogout }) {
     const [clothingItems, setClothingItems] = useState([]);
     const [activeCategory, setActiveCategory] = useState('All');
-    const [activeSubCategory, setActiveSubCategory] = useState('All');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isSuggestModalOpen, setIsSuggestModalOpen] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
-    
     const [outfitSuggestion, setOutfitSuggestion] = useState(null);
     const [isSuggesting, setIsSuggesting] = useState(false);
     const [suggestionError, setSuggestionError] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
     const authHeader = { 'Authorization': `Bearer ${token}` };
 
@@ -152,18 +409,29 @@ function WardrobeApp({ token, onLogout }) {
     }, [token]);
 
     const filteredItems = useMemo(() => {
-        if (activeCategory === 'Laundry') return clothingItems.filter(item => item.inLaundry);
-        return clothingItems.filter(item => {
-            const notInLaundry = !item.inLaundry;
-            const categoryMatch = activeCategory === 'All' || item.category === activeCategory;
-            const subCategoryMatch = activeSubCategory === 'All' || item.subCategory === activeSubCategory;
-            return notInLaundry && categoryMatch && (activeCategory !== 'T-Shirts' || subCategoryMatch);
-        });
-    }, [clothingItems, activeCategory, activeSubCategory]);
+       let items = clothingItems;
 
-    useEffect(() => {
-        if (activeCategory !== 'T-Shirts') setActiveSubCategory('All');
-    }, [activeCategory]);
+        // 1. Filter by category
+        if (activeCategory === 'Laundry') {
+            items = items.filter(item => item.inLaundry);
+        } else if (activeCategory !== 'All') {
+            items = items.filter(item => !item.inLaundry && item.category === activeCategory);
+        } else {
+            items = items.filter(item => !item.inLaundry);
+        }
+
+        // 2. Filter by search term (if there is one)
+        if (searchTerm.trim() !== '') {
+            items = items.filter(item => 
+                item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                item.brand.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+        }
+
+        return items;
+    }, [clothingItems, activeCategory, searchTerm]);
+
+
     
     const handleAddItem = async (newItem) => {
         try {
@@ -212,41 +480,103 @@ function WardrobeApp({ token, onLogout }) {
         } catch (err) { console.error("Delete item error:", err); }
     };
 
-    const getOutfitSuggestion = async (occasion) => {
-        // This function remains the same as before
+    const getOutfitSuggestion = async (options) => {
+        const { occasion, style, weather } = options;
         setIsSuggesting(true);
-        setOutfitSuggestion(null);
         setSuggestionError(null);
-        const availableItems = clothingItems.filter(item => !item.inLaundry).map(({ name, category, subCategory, itemSize }) => ({ name, category, subCategory: subCategory || 'N/A', size: itemSize }));
-        if (availableItems.length < 3) {
-            setSuggestionError("You need at least a top, bottom, and shoes in your wardrobe to get a suggestion.");
-            setIsSuggesting(false);
-            return;
-        }
-        const prompt = `You are a fashion stylist. Based on the following available clothes, suggest a complete outfit for the occasion: "${occasion}". Please select one top, one bottom, and one pair of shoes. Optionally, you can also add one outerwear piece, one hat, and one watch. Available items: ${JSON.stringify(availableItems, null, 2)} Respond with only the JSON object containing the names of the selected items.`;
-        const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-        const payload = { contents: chatHistory, generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { top: { type: "STRING" }, bottom: { type: "STRING" }, shoes: { type: "STRING" }, outerwear: { type: "STRING" }, hat: { type: "STRING" }, watch: { type: "STRING" } }, required: ["top", "bottom", "shoes"] } } };
-        try {
+
+        const availableItems = clothingItems.filter(item => !item.inLaundry).map(item => {
+            return `(ID: ${item.id}, Name: ${item.name}, Brand: ${item.brand}, Category: ${item.category}, Department: ${item.department})`;
+        }).join('\n');
+
+        const prompt = `
+            You are a fashion stylist. Based on the user's wardrobe and request, suggest a complete outfit.
+            The user's request is:
+            - Occasion: "${occasion}"
+            - Desired Style: "${style}"
+            - Weather: "${weather}"
+
+            Here is the list of available items in the user's wardrobe:
+            ${availableItems}
+
+            RULES:
+            1.  You MUST choose items ONLY from the provided list of available items.
+            2.  Select one item for each relevant category (e.g., one top, one bottom, one pair of shoes).
+            3.  Provide your response as a JSON object. The keys should be the item's category (e.g., "Top Wear", "Bottom Wear", "Footwear", "Accessory"), and the value should be the full item object (including id, name, brand, etc.) from the list that you selected.
+            4.  If you cannot create a suitable outfit, return an empty JSON object {}.
+
+            Example of a valid JSON response:
+            {
+                "Top Wear": {"id": 1, "name": "Blue T-Shirt", "brand": "Nike", "category": "T-Shirts", "department": "Men"},
+                "Bottom Wear": {"id": 5, "name": "Black Jeans", "brand": "Levi's", "category": "Pants", "department": "Men"},
+                "Footwear": {"id": 10, "name": "White Sneakers", "brand": "Adidas", "category": "Shoes", "department": "Men"}
+            }
+        `;
+
+               try {
+            let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+            const payload = { 
+                contents: chatHistory,
+                generationConfig: { responseMimeType: "application/json" }
+            };
             const apiKey = "";
-            const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-            const response = await fetch(geminiApiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (!response.ok) throw new Error(`API request failed`);
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`API request failed with status ${response.status}`);
+            }
+
             const result = await response.json();
-            if (result.candidates && result.candidates[0].content.parts[0].text) {
-                const suggestion = JSON.parse(result.candidates[0].content.parts[0].text);
-                const suggestedItems = { top: clothingItems.find(item => item.name === suggestion.top), bottom: clothingItems.find(item => item.name === suggestion.bottom), shoes: clothingItems.find(item => item.name === suggestion.shoes), outerwear: clothingItems.find(item => item.name === suggestion.outerwear) || null, hat: clothingItems.find(item => item.name === suggestion.hat) || null, watch: clothingItems.find(item => item.name === suggestion.watch) || null };
-                setOutfitSuggestion(suggestedItems);
-            } else { throw new Error("Could not parse suggestion."); }
-        } catch (err) { setSuggestionError("Sorry, I couldn't come up with an outfit."); } finally { setIsSuggesting(false); }
+            
+            // Check if the response was blocked for safety reasons
+            if (result.promptFeedback) {
+                console.error("AI Prompt Blocked:", result.promptFeedback);
+                throw new Error("The request was blocked for safety reasons. Please try a different prompt.");
+            }
+
+            if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
+                const text = result.candidates[0].content.parts[0].text;
+                
+                // --- NEW: Log the raw response for debugging ---
+                console.log("Raw AI Response Text:", text);
+
+                try {
+                    const suggestion = JSON.parse(text);
+                    if (Object.keys(suggestion).length === 0) {
+                        setSuggestionError("Sorry, I couldn't create a suitable outfit from your current wardrobe for that request.");
+                        setOutfitSuggestion(null);
+                    } else {
+                        setOutfitSuggestion(suggestion);
+                    }
+                } catch (jsonError) {
+                    // This catches errors if the AI response is not valid JSON
+                    console.error("Failed to parse AI response as JSON:", jsonError);
+                    throw new Error("The AI returned an invalid format. Please try again.");
+                }
+            } else {
+                throw new Error("Unexpected API response format.");
+            }
+        } catch (err) {
+            console.error("AI suggestion error:", err);
+            setSuggestionError(err.message || "Sorry, something went wrong while generating your outfit. Please try again.");
+        } finally {
+            setIsSuggesting(false);
+        }
     };
 
-    return (
+
+return (
         <>
             <Header onAddItem={() => setIsAddModalOpen(true)} onMenuClick={() => setSidebarOpen(!sidebarOpen)} onLogout={onLogout} />
             <div className="flex">
                 <FilterSidebar 
                     activeCategory={activeCategory} setActiveCategory={setActiveCategory}
-                    activeSubCategory={activeSubCategory} setActiveSubCategory={setActiveSubCategory}
                     isOpen={sidebarOpen} setIsOpen={setSidebarOpen}
                     clearLaundry={clearLaundry} laundryCount={clothingItems.filter(i => i.inLaundry).length}
                     onSuggestOutfit={() => setIsSuggestModalOpen(true)}
@@ -255,6 +585,7 @@ function WardrobeApp({ token, onLogout }) {
                     items={filteredItems} activeCategory={activeCategory} 
                     onToggleLaundry={toggleLaundryStatus} onDeleteItem={deleteItem}
                     isLoading={isLoading} error={error} 
+                    searchTerm={searchTerm} setSearchTerm={setSearchTerm} // Pass search state down
                 />
             </div>
             {isAddModalOpen && <AddItemModal onClose={() => setIsAddModalOpen(false)} onAddItem={handleAddItem} />}
@@ -262,7 +593,6 @@ function WardrobeApp({ token, onLogout }) {
         </>
     );
 }
-
 
 // --- All other sub-components (Header, Sidebar, Cards, Modals, etc.) ---
 // These components are mostly the same, with minor props changes.
@@ -277,11 +607,65 @@ function Header({ onAddItem, onMenuClick, onLogout }) {
 }
 
 function FilterSidebar({ isOpen, setIsOpen, ...props }) {
-    const { activeCategory, setActiveCategory, activeSubCategory, setActiveSubCategory, clearLaundry, laundryCount, onSuggestOutfit } = props;
-    const handleCategoryClick = (category) => { setActiveCategory(category); if (window.innerWidth < 1024) setIsOpen(false); };
-    const handleSubCategoryClick = (subCategory) => { setActiveSubCategory(subCategory); if (window.innerWidth < 1024) setIsOpen(false); };
+    const { activeCategory, setActiveCategory, clearLaundry, laundryCount, onSuggestOutfit } = props;
+    const [openMainCategory, setOpenMainCategory] = useState('Top Wear'); // State to track which category is open
+
+    const handleCategoryClick = (category) => { 
+        setActiveCategory(category); 
+        if (window.innerWidth < 1024) setIsOpen(false); 
+    };
+
     return (
-        <><div className={`fixed inset-0 bg-black bg-opacity-50 z-30 transition-opacity lg:hidden ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsOpen(false)}></div><aside className={`fixed top-0 left-0 h-full bg-white shadow-xl z-40 w-72 transform transition-transform lg:transform-none lg:relative lg:w-72 lg:shadow-none lg:z-auto ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}><div className="p-5 border-b border-gray-200 flex justify-between items-center"><h2 className="text-lg font-semibold text-gray-700">Categories</h2><button onClick={() => setIsOpen(false)} className="lg:hidden text-gray-500 hover:text-gray-800"><X size={24} /></button></div><div className="h-[calc(100%-65px)] overflow-y-auto"><nav className="p-5 space-y-2"><button onClick={onSuggestOutfit} className="w-full text-left px-4 py-2 rounded-md transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-1 flex items-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:from-purple-600 hover:to-indigo-700 shadow-sm"><Sparkles size={16}/> ✨ Suggest an Outfit</button><div className="border-t my-4"></div><FilterButton label="All" isActive={activeCategory === 'All'} onClick={() => handleCategoryClick('All')} /><FilterButton label="Laundry" icon={<WashingMachine size={16}/>} count={laundryCount} isActive={activeCategory === 'Laundry'} onClick={() => handleCategoryClick('Laundry')} /><div className="border-t my-4"></div>{categories.map(cat => (<FilterButton key={cat} label={cat} isActive={activeCategory === cat} onClick={() => handleCategoryClick(cat)} />))}</nav>{activeCategory === 'Laundry' && laundryCount > 0 && (<div className="p-5 border-t"><button onClick={clearLaundry} className="w-full flex items-center justify-center gap-2 bg-green-500 text-white font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-green-600 transition-colors"><WashingMachine size={20}/> Wash All Items</button></div>)}{subCategories[activeCategory]?.length > 0 && (<div className="p-5 border-t border-gray-200"><h3 className="text-md font-semibold text-gray-600 mb-3">Sub-categories for {activeCategory}</h3><div className="space-y-2"><FilterButton label="All" isActive={activeSubCategory === 'All'} onClick={() => handleSubCategoryClick('All')} isSub />{subCategories[activeCategory].map(subCat => (<FilterButton key={subCat} label={subCat} isActive={activeSubCategory === subCat} onClick={() => handleSubCategoryClick(subCat)} isSub />))}</div></div>)}</div></aside></>
+        <>
+            <div className={`fixed inset-0 bg-black bg-opacity-50 z-30 transition-opacity lg:hidden ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsOpen(false)}></div>
+            <aside className={`fixed top-0 left-0 h-full bg-white shadow-xl z-40 w-72 transform transition-transform lg:transform-none lg:relative lg:w-72 lg:shadow-none lg:z-auto ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                <div className="p-5 border-b border-gray-200 flex justify-between items-center">
+                    <button onClick={() => setIsOpen(false)} className="lg:hidden text-gray-500 hover:text-gray-800"><X size={24} /></button>
+                </div>
+                <div className="h-[calc(100%-65px)] overflow-y-auto">
+                    <nav className="p-5 space-y-2">
+                        <button onClick={onSuggestOutfit} className="w-full text-left px-4 py-2 rounded-md transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-1 flex items-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:from-purple-600 hover:to-indigo-700 shadow-sm"><Sparkles size={16}/> ✨ Suggest an Outfit</button>
+                        <div className="border-t my-4"></div>
+                        <FilterButton label="All" isActive={activeCategory === 'All'} onClick={() => handleCategoryClick('All')} />
+                        <FilterButton label="Laundry" icon={<WashingMachine size={16}/>} count={laundryCount} isActive={activeCategory === 'Laundry'} onClick={() => handleCategoryClick('Laundry')} />
+                        <div className="border-t my-4"></div>
+                        
+                        {/* --- NEW: Render nested categories --- */}
+                        <div className="space-y-1">
+                            {categoryData.map(mainCat => (
+                                <div key={mainCat.name}>
+                                    <button 
+                                        onClick={() => setOpenMainCategory(openMainCategory === mainCat.name ? null : mainCat.name)}
+                                        className="w-full flex justify-between items-center px-4 py-2 text-left text-sm font-semibold text-gray-800 hover:bg-gray-200 rounded-md"
+                                    >
+                                        {mainCat.name}
+                                        <ChevronDown size={16} className={`transition-transform ${openMainCategory === mainCat.name ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    {openMainCategory === mainCat.name && (
+                                        <div className="pl-4 mt-1 space-y-1">
+                                            {mainCat.subCategories.map(subCat => (
+                                                <FilterButton 
+                                                    key={subCat} 
+                                                    label={subCat} 
+                                                    isActive={activeCategory === subCat} 
+                                                    onClick={() => handleCategoryClick(subCat)} 
+                                                    isSub 
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </nav>
+                    {activeCategory === 'Laundry' && laundryCount > 0 && (
+                        <div className="p-5 border-t">
+                            <button onClick={clearLaundry} className="w-full flex items-center justify-center gap-2 bg-green-500 text-white font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-green-600 transition-colors"><WashingMachine size={20}/> Wash All Items</button>
+                        </div>
+                    )}
+                </div>
+            </aside>
+        </>
     );
 }
 
@@ -292,17 +676,40 @@ function FilterButton({ label, isActive, onClick, isSub = false, icon = null, co
     return (<button onClick={onClick} className={`${baseClasses} ${isActive ? activeClasses : inactiveClasses}`}><div className="flex items-center gap-2">{icon}<span>{label}</span></div>{count > 0 && <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${isActive ? 'bg-white text-blue-600' : 'bg-gray-300 text-gray-700'}`}>{count}</span>}</button>);
 }
 
-function MainContent({ items, activeCategory, onToggleLaundry, onDeleteItem, isLoading, error }) {
+function MainContent({ items, activeCategory, onToggleLaundry, onDeleteItem, isLoading, error, searchTerm, setSearchTerm }) {
     if (isLoading) return <div className="flex-1 p-8 text-center"><Spinner /> <p className="mt-2 text-gray-500">Loading your wardrobe...</p></div>;
     if (error) return <div className="flex-1 p-8 text-center text-red-500">Error: {error}</div>;
+    
     return (
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
+            {/* --- NEW: Search Bar --- */}
+            <div className="mb-6">
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                    <input 
+                        type="text"
+                        placeholder="Search by name or brand..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+            </div>
+
             {items.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
                     {items.map(item => <ClothingCard key={item.id} item={item} onToggleLaundry={onToggleLaundry} onDeleteItem={onDeleteItem} />)}
                 </div>
             ) : (
-                <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 mt-20"><Shirt size={48} className="mb-4" /><h3 className="text-xl font-semibold">{activeCategory === 'Laundry' ? 'Laundry Basket is Empty!' : 'Your Wardrobe is Empty'}</h3><p className="max-w-sm mt-2">{activeCategory === 'Laundry' ? 'Great job staying on top of your chores.' : 'Click "Add New Item" to start building your collection.'}</p></div>
+                 <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 mt-20">
+                    <Shirt size={48} className="mb-4" />
+                    <h3 className="text-xl font-semibold">
+                        {searchTerm ? `No items found for "${searchTerm}"` : (activeCategory === 'Laundry' ? 'Laundry Basket is Empty!' : 'Your Wardrobe is Empty')}
+                    </h3>
+                    <p className="max-w-sm mt-2">
+                        {searchTerm ? 'Try a different search term or clear the search.' : (activeCategory === 'Laundry' ? 'Great job staying on top of your chores.' : 'Click "Add New Item" to start building your collection.')}
+                    </p>
+                </div>
             )}
         </main>
     );

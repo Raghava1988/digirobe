@@ -9,6 +9,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
@@ -26,8 +27,7 @@ public class JwtTokenProvider {
     @PostConstruct
     protected void init() {
         // Decode the Base64 secret string into a SecretKey object
-        byte[] keyBytes = Base64.getDecoder().decode(secretString);
-        this.SECRET_KEY = Keys.hmacShaKeyFor(keyBytes);
+        this.SECRET_KEY = Keys.hmacShaKeyFor(secretString.getBytes(StandardCharsets.UTF_8));
     }
     
     private final long JWT_EXPIRATION_MS = 1000 * 60 * 60 * 24; // 24 hours
