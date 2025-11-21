@@ -1,52 +1,57 @@
-
-# Digirobe - Your Smart Digital Wardrobe
+# 👗 Digirobe – Your Smart Digital Wardrobe  
+*A Full-Stack AI-Powered Wardrobe & Outfit Recommender*
 
 ![Digirobe Login Screen](./digirobe/screenshots/01-login-screen.png)
 
-![Digirobe Home Screen](./digirobe/screenshots/06-ProductHomepage.png)
+📍 **Live Demo:** https://digirobe.netlify.app/  
+🎯 **Status:** Active | In Development  
+🛠️ **Stack:** Java | Spring Boot | React | PostgreSQL | Google Gemini API | Tailwind CSS  
 
-**Live Demo:** [https://digirobe.netlify.app/](https://digirobe.netlify.app/)
+---
 
-## The Story Behind Digirobe
+## 🌟 Why I Built Digirobe
 
-This project was born from a common, everyday problem: a wardrobe full of clothes, but a recurring feeling of having nothing to wear. I found myself repeatedly wearing the same few outfits, while dozens of other clothing items sat unused. Packing for trips was a time-consuming process of digging through suitcases, trying to piece together outfits.
+This project started with a relatable problem:
 
-I wanted a solution that was accessible, intelligent, and would help me make the most of what I already own. The idea was simple: what if I could have my entire wardrobe on my phone?
+> _“I have a closet full of clothes, but I still feel like I have nothing to wear.”_
 
-**Digirobe** is the result of that idea. It's a full-stack web application designed to be a smart, digital closet. It not only helps you keep track of your clothes but also acts as a personal stylist, suggesting outfits for any occasion. This project is a demonstration of building a modern, secure, and feature-rich application from the ground up, solving a real-world problem with technology.
+Most of us wear only 20% of our wardrobe regularly. Planning outfits for trips, weather, or events is time-consuming and frustrating.
 
-## Key Features
+💡 **What if my wardrobe could live on my phone?**  
+💡 **What if I could get AI-powered outfit suggestions tailored to my actual clothes?**
 
-* **Secure User Authentication:** Full registration and login system using JWT (JSON Web Tokens), ensuring each user has their own private, secure wardrobe.
-* **Digital Wardrobe Management:** Easily add, view, and categorize all your clothing and accessories. Each item includes details like brand, size, price, and a photo.
-* **AI-Powered Outfit Suggester:** Leveraging the **Google Gemini API**, the app can suggest complete, head-to-toe outfits for any occasion you describe (e.g., "casual coffee date," "job interview").
-* **Laundry Tracking:** Move items to a virtual laundry basket so you know what's clean and what's not. A "Wash All" feature makes it easy to manage.
-* **Persistent Cloud Storage:** All user data and images are securely stored in a cloud-hosted PostgreSQL database, ensuring data is never lost.
-* **Fully Responsive UI:** A clean, modern, and intuitive user interface built with React and Tailwind CSS that works seamlessly on both desktop and mobile devices.
-* **PWA Enabled:** The application can be added to a mobile device's home screen, providing a native-app-like experience without the need for an app store.
+That idea turned into **Digirobe**, a smart, AI-powered digital wardrobe that:
 
-## Tech Stack & Architecture
+✔️ Helps you store and organize clothing  
+✔️ Learns your wardrobe preferences  
+✔️ Suggests outfits using **Google Gemini AI**  
+✔️ Tracks laundry status  
+✔️ Works on web and mobile (PWA-ready)
 
-This project is a full-stack application built with a modern, industry-standard technology stack.
+---
 
-### Backend (`digirobe-backend`)
-* **Framework:** Spring Boot 3
-* **Language:** Java 17
-* **Security:** Spring Security 6, JSON Web Tokens (JWT)
-* **Database:** Spring Data JPA (Hibernate) with a PostgreSQL database
-* **API:** RESTful API architecture
-* **Deployment:** Packaged as a Docker container and deployed on Render
+## ✨ Key Features
 
-### Frontend (`digirobe-frontend`)
-* **Framework:** React 18
-* **Styling:** Tailwind CSS
-* **Icons:** Lucide React
-* **Deployment:** Deployed on Netlify with continuous deployment from GitHub
+| Feature | Description |
+|--------|-------------|
+| 🧾 Secure Auth | JWT-based login, signup & user sessions |
+| 💼 Digital Wardrobe | Add, view, filter clothes with details & photos |
+| 🎯 AI Outfit Recommender | Gemini AI suggests outfits based on event/style |
+| 🧺 Laundry Mode | Track what’s clean, worn, or needs washing |
+| 📸 Image Support | Upload & display photos for clothing items |
+| 📱 Mobile-Friendly | Fully responsive (React + Tailwind) |
+| 📦 PWA Enabled | Add to home screen, works like an app |
+| 🚀 Production Ready | Deployed on Netlify (FE) and Render (BE) |
 
-### Artificial Intelligence
-* **Model:** Google Gemini API for natural language understanding and outfit generation.
+![AI Suggestion](./digirobe/screenshots/07-AISuggestion.png)
 
-* ![Digirobe Home Screen](./digirobe/screenshots/07-AISuggestion.png)
+---
 
+## 🏛️ Architecture Overview
 
-
+```mermaid
+flowchart LR
+  User --> Frontend["React + Tailwind"]
+  Frontend --> Backend["Spring Boot 3 API"]
+  Backend --> DB["PostgreSQL Cloud DB"]
+  Backend --> Gemini["Google Gemini API"]
